@@ -84,7 +84,10 @@
       return { status: 'mismatch', detail: `page ${location.pathname}` };
     }
     const state = await waitFor(() => {
+      // Déconnecté, un profil public s'affiche quand même, avec un lien
+      // « Se connecter » dans l'en-tête et sans boîte de réception.
       if (document.querySelector('input[name="username"]')) return 'logged-out';
+      if (document.querySelector('a[href*="/accounts/login"]') && !loggedIn()) return 'logged-out';
       if (findButton(WORDS.unblock)) return 'already';
       if (findButton(WORDS.edit)) return 'self';
       if (hasText(WORDS.missing)) return 'missing';
