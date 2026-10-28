@@ -23,6 +23,8 @@ const initials = (p) => (p.name || p.handle).split(/[\s._-]+/).filter(Boolean).s
 const fmt = (n) => Number(n || 0).toLocaleString('fr-FR');
 const ago = (t) => { const s = Math.max(0, Math.round((Date.now() - t) / 1000)); return s < 60 ? `il y a ${s} s` : s < 3600 ? `il y a ${Math.round(s / 60)} min` : `il y a ${Math.round(s / 3600)} h`; };
 const profileOf = (k) => state.list.profiles.find((p) => key(p) === k) || null;
+const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const pendingList = () => state.list.profiles.filter((p) => !state.done[key(p)] && state.networks.includes(p.network));
 const statusOf = (p) => (state.done[key(p)] || {}).status || null;
 
 // ---------- vue principale ----------
@@ -76,14 +78,15 @@ function renderMain() {
   const card = $('cur-card');
   const title = $('cur-title');
   const cta = $('cta');
-  const next = $('next');
   const fresh = state.lastResult && Date.now() - state.lastResult.at < STAMP_MS ? state.lastResult : null;
   const freshP = fresh ? profileOf(fresh.key) : null;
-  const upNext = state.upNext || [];
+  const pending = pendingList();
+  const upNext = pending.filter((p) => !(state.current && key(p) === key(state.current)));
+  const remaining = Math.max(0, state.settings.dailyCap - state.daily.count);
   let selectedNet = null;
   document.body.dataset.step = fresh && fresh.status === 'blocked' ? 'blocked' : 'ready';
   card.className = 'acc';
-  next.innerHTML = '';
+  cta.hidden = false;
 
   if (!state.list.profiles.length) {
     title.textContent = 'Pour commencer';
@@ -109,11 +112,11 @@ function renderMain() {
   } else if (state.stopReason === 'cap') {
     title.textContent = "Bravo, c'est fait pour aujourd'hui";
     card.innerHTML = `<div class="who"><div class="portrait ok">✓</div><div><h2>${fmt(state.daily.count)} compte${state.daily.count > 1 ? 's' : ''} bloqué${state.daily.count > 1 ? 's' : ''}</h2><div class="handle">On reprend demain, à ton rythme.</div></div></div>`;
-    cta.textContent = 'Partager le compteur'; cta.className = 'cta'; cta.disabled = false; cta.onclick = share;
-  } else if (state.stopReason === 'done' || state.pending === 0) {
+    cta.hidden = true;
+  } else if (state.stopReason === 'done' || pending.length === 0) {
     title.textContent = 'Liste terminée';
     card.innerHTML = `<div class="who"><div class="portrait ok">✓</div><div><h2>Tout est bloqué</h2><div class="handle">La liste se met à jour toute seule, reviens plus tard.</div></div></div>`;
-    cta.textContent = 'Partager le compteur'; cta.className = 'cta'; cta.disabled = false; cta.onclick = share;
+    cta.hidden = true;
   } else if (state.stopReason === 'logged-out') {
     const p = state.lastResult ? profileOf(state.lastResult.key) : upNext[0];
     const n = p ? p.network : 'x';
@@ -127,21 +130,30 @@ function renderMain() {
     title.textContent = 'À suivre';
     const p = upNext[0];
     selectedNet = p ? p.network : null;
-    card.innerHTML = p ? accountCard(p, `<div class="state muted">${fmt(state.pending)} compte${state.pending > 1 ? 's' : ''} à bloquer</div>`) : '';
+    card.innerHTML = p ? accountCard(p, `<div class="state muted">${fmt(pending.length)} compte${pending.length > 1 ? 's' : ''} dans la liste, ${remaining} encore aujourd'hui</div>`) : '';
     const started = Object.keys(state.done).length > 0;
     cta.textContent = started ? 'Reprendre' : 'Démarrer'; cta.className = 'cta'; cta.disabled = false; cta.onclick = () => send({ type: 'start' }).then(refresh);
   }
 
-  const shown = freshP || state.current || (state.running ? upNext[0] : null);
-  const after = shown ? upNext.filter((p) => key(p) !== key(shown)).slice(0, 2) : (state.running ? [] : upNext.slice(1, 3));
-  next.innerHTML = after.map((p, i) =>
-    `<div><span class="portrait">${esc(initials(p))}</span><b>${esc(p.name || '@' + p.handle)}</b><span class="h">@${esc(p.handle)}</span><span class="when">${state.stopReason === 'cap' ? (i === 0 ? 'demain' : 'puis') : (i === 0 ? 'à suivre' : 'puis')}</span></div>`).join('');
-  renderNets($('nets'), selectedNet, (n) => { filter.net = n; view('list'); });
-}
+  // À bloquer aujourd'hui : ce qui reste dans le plafond du jour, sans le compte affiché.
+  const shown = freshP || state.current || (state.running ? upNext[0] : (!state.stopReason || state.stopReason === 'user' ? upNext[0] : null));
+  const todo = upNext.filter((p) => !shown || key(p) !== key(shown)).slice(0, Math.max(0, remaining - (shown && !freshP ? 1 : 0)));
+  $('todo-title').textContent = `À bloquer aujourd'hui · ${todo.length + (shown && !freshP ? 1 : 0)}`;
+  $('todo-title').hidden = !state.list.profiles.length;
+  $('todo').innerHTML = todo.length
+    ? todo.map((p) => `<div><span class="portrait">${esc(initials(p))}</span><b>${esc(p.name || '@' + p.handle)}</b><span class="h">@${esc(p.handle)} · ${esc(netLabel(p.network))}</span></div>`).join('')
+    : `<div class="empty">${remaining === 0 ? 'Plafond du jour atteint, on reprend demain.' : pending.length ? 'Rien d’autre aujourd’hui.' : 'Rien à bloquer.'}</div>`;
 
-async function share() {
-  const txt = `${fmt(state.total)} blocages depuis mon navigateur avec On bloque.`;
-  try { await navigator.clipboard.writeText(txt); $('cta').textContent = 'Copié !'; setTimeout(render, 1200); } catch (_) { /* presse-papier refusé */ }
+  // Fait aujourd'hui : les comptes traités depuis minuit, les plus récents en tête.
+  const since = startOfToday();
+  const doneToday = Object.entries(state.done).filter(([, v]) => v.at >= since).sort((a, b) => b[1].at - a[1].at)
+    .map(([k, v]) => ({ p: profileOf(k) || { network: k.split(':')[0], handle: k.split(':')[1], name: '' }, v }));
+  $('done-title').textContent = `Fait aujourd'hui · ${doneToday.length}`;
+  $('done-title').hidden = !state.list.profiles.length;
+  $('done-today').innerHTML = doneToday.length
+    ? doneToday.map(({ p, v }) => { const [label, tone] = STATUS_LABEL[v.status] || ['Erreur', 'err']; return `<div><span class="portrait">${esc(initials(p))}</span><b>${esc(p.name || '@' + p.handle)}</b><span class="h">@${esc(p.handle)} · ${esc(netLabel(p.network))}</span><span class="chip ${tone}">${esc(label)}</span></div>`; }).join('')
+    : `<div class="empty">Rien encore aujourd'hui.</div>`;
+  renderNets($('nets'), selectedNet, (n) => { filter.net = n; view('list'); });
 }
 
 // ---------- vue liste ----------
