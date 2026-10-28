@@ -2,48 +2,89 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <title>Right Blocker</title>
+  <title>On bloque.</title>
   <link rel="stylesheet" href="popup.css">
 </head>
-<body>
-  <h1>Right Blocker</h1>
+<body data-view="main" data-step="loading">
 
-  <section>
-    <h2>Liste</h2>
-    <div class="row">
-      <input id="url" type="url" placeholder="https://exemple.org/blocklist.json">
-      <button id="load-url">Charger</button>
-    </div>
-    <div class="row">
-      <label class="file">
-        <input id="file" type="file" accept=".json,application/json">
-        <span>Charger un fichier local…</span>
-      </label>
-    </div>
-    <p id="source" class="muted"></p>
-  </section>
+  <header class="top">
+    <button class="brand" id="go-main" title="Accueil">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="5"/><path d="M8.5 8.5l15 15" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg><span>n bloque.</span>
+    </button>
+    <span class="sp"></span>
+    <button class="ipill" id="go-list">Liste <b id="n-list">0</b></button>
+    <button class="ibtn" id="go-settings" title="Réglages" aria-label="Réglages">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+  </header>
 
-  <section>
-    <h2>File</h2>
-    <div class="counts">
-      <div><b id="n-total">0</b><span>profils</span></div>
-      <div><b id="n-pending">0</b><span>à faire</span></div>
-      <div><b id="n-blocked">0</b><span>bloqués</span></div>
-      <div><b id="n-error">0</b><span>erreurs</span></div>
+  <!-- Vue principale -->
+  <main id="view-main">
+    <div class="skl" aria-hidden="true">
+      <div class="sk shimmer" style="height:132px;border-radius:17px"></div>
+      <div class="skrow"><div class="sk shimmer" style="width:64px"></div><div class="sk shimmer" style="width:92px"></div><div class="sk shimmer" style="width:70px"></div><div class="sk shimmer" style="width:84px"></div></div>
+      <div class="sk shimmer" style="width:90px;height:11px;margin:16px 0 8px"></div>
+      <div class="sk shimmer" style="height:128px;border-radius:17px"></div>
+      <div class="sk shimmer" style="height:44px;border-radius:30px;margin-top:14px"></div>
     </div>
-    <p id="current" class="muted"></p>
-    <div class="row">
-      <button id="start" class="primary">Démarrer</button>
-      <button id="pause">Pause</button>
-      <button id="retry">Retenter les erreurs</button>
-      <button id="reset" class="danger">Tout retenter</button>
-    </div>
-  </section>
 
-  <section>
-    <h2>Journal</h2>
-    <pre id="log"></pre>
-  </section>
+    <div class="real">
+      <section class="live">
+        <div class="row1"><span class="dot" id="live-dot"></span><span class="tag-live" id="live-tag">EN DIRECT</span><span class="delta" id="delta">+0 aujourd'hui</span></div>
+        <div class="num" id="num"></div>
+        <div class="what">blocages depuis ce navigateur</div>
+        <div class="today"><span id="today-txt">Aujourd'hui : 0 / 12</span><span class="bar"><i id="today-bar"></i></span></div>
+      </section>
+
+      <div class="nets" id="nets"></div>
+
+      <div class="section-title" id="cur-title">En cours</div>
+      <div class="acc" id="cur-card"></div>
+      <div class="next" id="next"></div>
+
+      <button class="cta" id="cta">Démarrer</button>
+    </div>
+  </main>
+
+  <!-- Vue liste -->
+  <main id="view-list">
+    <div class="sub"><button class="ibtn" id="back-list" aria-label="Retour"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button><h2>Liste <span id="list-count" class="muted"></span></h2><span class="sp"></span><button class="ipill" id="refresh" title="Recharger la liste">↻ <span id="list-date"></span></button></div>
+    <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="q" type="search" placeholder="Chercher un nom ou un @"></label>
+    <div class="nets" id="list-nets"></div>
+    <div class="cats" id="cats"></div>
+    <div class="rows" id="rows"></div>
+    <div class="src"><span id="src-txt"></span><span id="src-date"></span></div>
+  </main>
+
+  <!-- Vue réglages -->
+  <main id="view-settings">
+    <div class="sub"><button class="ibtn" id="back-settings" aria-label="Retour"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button><h2>Réglages</h2></div>
+
+    <div class="section-title">Source de la liste</div>
+    <div class="acc">
+      <label class="field"><span>Adresse du fichier JSON</span><input id="url" type="url" placeholder="https://exemple.org/blocklist.json"></label>
+      <div class="btnrow"><button class="cta small" id="load-url">Charger l'adresse</button><label class="cta small ghost" for="file">Fichier local…</label><input id="file" type="file" accept=".json,application/json" hidden></div>
+      <p class="muted" id="source"></p>
+    </div>
+
+    <div class="section-title">Rythme</div>
+    <div class="acc">
+      <label class="field inline"><span>Blocages par jour, au maximum</span><input id="cap" type="number" min="1" max="200" step="1"></label>
+      <p class="muted">Un blocage toutes les 4 à 9 secondes, un plafond par jour : des rafales font suspendre le compte.</p>
+    </div>
+
+    <div class="section-title">Comptes connectés</div>
+    <div class="acc">
+      <div class="btnrow"><button class="cta small ghost" data-open="x">Ouvrir x.com ↗</button><button class="cta small ghost" data-open="instagram">Ouvrir instagram.com ↗</button></div>
+      <p class="muted">L'extension bloque depuis les onglets où tu es déjà connecté. Rien n'est stocké.</p>
+    </div>
+
+    <div class="section-title">Historique</div>
+    <div class="acc">
+      <div class="btnrow"><button class="cta small ghost" id="retry">Retenter les erreurs</button><button class="cta small ghost danger" id="reset">Tout retenter</button></div>
+      <pre id="log" class="log"></pre>
+    </div>
+  </main>
 
   <script src="popup.js"></script>
 </body>

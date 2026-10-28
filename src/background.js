@@ -21,11 +21,22 @@ const DEFAULTS = {
   list: { version: 0, updated: null, profiles: [] },
   done: {},                           // "réseau:handle" -> { status, at }
   running: false,
-  current: null,                      // profil en cours { network, handle }
+  stopReason: null,                   // null | 'user' | 'cap' | 'done' | 'logged-out'
+  current: null,                      // profil en cours { network, handle, name, category }
+  lastResult: null,                   // { key, status, at } du dernier profil traité
   lastActivity: 0,
   workerTabs: {},                     // réseau -> id d'onglet
   log: [],                            // dernières lignes, les plus récentes en tête
+  total: 0,                           // blocages réussis depuis ce navigateur
+  daily: { date: '', count: 0 },      // blocages du jour
+  settings: { dailyCap: 12 },         // plafond quotidien, à rythme humain
+  loading: false,                     // liste en cours de chargement
 };
+
+const todayKey = () => new Date().toISOString().slice(0, 10);
+function dailyOf(state) {
+  return state.daily.date === todayKey() ? state.daily : { date: todayKey(), count: 0 };
+}
 
 async function getState() {
   const stored = await chrome.storage.local.get(Object.keys(DEFAULTS));
@@ -51,6 +62,9 @@ function parseList(text) {
     .map((p) => ({
       network: String(p.network || 'x').toLowerCase(),
       handle: String(p.handle || '').replace(/^@/, '').trim().toLowerCase(),
+      name: String(p.name || p.handle || '').trim(),
+      category: String(p.category || '').trim(),
+      followers: p.followers == null ? null : Number(p.followers),
     }))
     .filter((p) => p.handle);
   return { version: Number(data.version || 0), updated: data.updated || null, profiles };
@@ -66,9 +80,14 @@ async function loadFromText(text, source) {
 async function refreshFromUrl() {
   const { source } = await getState();
   if (source.kind !== 'url' || !source.url) return null;
-  const res = await fetch(source.url, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return loadFromText(await res.text(), source);
+  await setState({ loading: true });
+  try {
+    const res = await fetch(source.url, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await loadFromText(await res.text(), source);
+  } finally {
+    await setState({ loading: false });
+  }
 }
 
 // ---------- file de blocage ----------
@@ -146,9 +165,15 @@ async function runLoop() {
     while (true) {
       const state = await getState();
       if (!state.running) break;
+      const daily = dailyOf(state);
+      if (daily.count >= state.settings.dailyCap) {
+        await setState({ running: false, current: null, stopReason: 'cap', daily });
+        await log(`Plafond du jour atteint (${state.settings.dailyCap}) : on reprend demain.`);
+        break;
+      }
       const next = nextPending(state);
       if (!next) {
-        await setState({ running: false, current: null });
+        await setState({ running: false, current: null, stopReason: 'done' });
         await log('File terminée : plus rien à bloquer.');
         break;
       }
@@ -168,13 +193,18 @@ async function runLoop() {
         await log(`${label} : erreur, ${e.message}`);
       }
       const s = await getState();
+      const d = dailyOf(s);
+      const blocked = status === 'blocked';
       await setState({
         done: { ...s.done, [key(next)]: { status, at: Date.now() } },
+        lastResult: { key: key(next), status, at: Date.now() },
+        total: s.total + (blocked ? 1 : 0),
+        daily: { date: d.date, count: d.count + (blocked ? 1 : 0) },
         current: null,
         lastActivity: Date.now(),
       });
       if (status === 'logged-out') {
-        await setState({ running: false });
+        await setState({ running: false, stopReason: 'logged-out' });
         await log(`Pas connecté à ${next.network} dans cet onglet : file mise en pause.`);
         break;
       }
@@ -194,7 +224,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const s = await getState();
         const pending = s.list.profiles.filter((p) => isPending(s, p)).length;
         const unsupported = s.list.profiles.filter((p) => !NETWORKS[p.network]).length;
-        return { ...s, pending, unsupported, networks: Object.keys(NETWORKS) };
+        const upNext = s.list.profiles.filter((p) => isPending(s, p) && !(s.current && key(p) === key(s.current))).slice(0, 2);
+        return { ...s, daily: dailyOf(s), pending, unsupported, upNext, networks: Object.keys(NETWORKS) };
       }
       case 'set-url': {
         await setState({ source: { kind: 'url', url: msg.url } });
@@ -202,16 +233,27 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         await chrome.alarms.create(REFRESH_ALARM, { periodInMinutes: 360 });
         return { ok: true };
       }
+      case 'refresh':
+        await refreshFromUrl();
+        return { ok: true };
       case 'load-text':
         await loadFromText(msg.text, { kind: 'file', url: '' });
         return { ok: true };
+      case 'set-settings': {
+        const s = await getState();
+        await setState({ settings: { ...s.settings, ...msg.settings } });
+        return { ok: true };
+      }
+      case 'open-network':
+        await chrome.tabs.create({ url: NETWORKS[msg.network].home });
+        return { ok: true };
       case 'start':
-        await setState({ running: true });
+        await setState({ running: true, stopReason: null });
         await log('File démarrée.');
         runLoop();
         return { ok: true };
       case 'pause':
-        await setState({ running: false });
+        await setState({ running: false, stopReason: 'user' });
         await log('File mise en pause.');
         return { ok: true };
       case 'reset-done':

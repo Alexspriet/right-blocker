@@ -1,9 +1,9 @@
 {
-  "version": 1,
+  "version": 2,
   "updated": "2026-10-28",
   "profiles": [
-    { "network": "x", "handle": "exemple_un" },
-    { "network": "x", "handle": "exemple_deux" },
-    { "network": "instagram", "handle": "exemple_trois" }
+    { "network": "x", "handle": "exemple_un", "name": "Exemple Un", "category": "Politiques", "followers": 120000 },
+    { "network": "x", "handle": "exemple_deux", "name": "Exemple Deux", "category": "Médias" },
+    { "network": "instagram", "handle": "exemple_trois", "name": "Exemple Trois", "category": "Influenceurs" }
   ]
 }
