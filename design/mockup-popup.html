@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Right Blocker popup mockup</title>
+<link rel="stylesheet" href="mockup-kit.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* Tokens read on onbloquelextremedroite.fun on 2026-10-28: cream page, near-black ink, one red,
+     DM Sans body, Space Grotesk 700 headings, 30 px pills, 17 px cards with a 4/24 warm shadow. */
+  :root { --brand: #EF2529; --brand-ink: #B2272A; --bg: #F7F4F1; --surface: #FFFFFF; --surface-2: #EFEBE8; --ink: #171717; --ink-2: #737373; --outline: #E6E1DE;
+          --live: #141414; --live-ink: #FFFFFF; --live-ink-2: rgba(255,255,255,.7); --ok: #1E8E5A; --keyline: 16px; --radius-card: 17px; --shadow-card: 0 4px 24px rgba(40,27,17,.063); }
+  :root[data-theme="dark"], .theme-dark { --brand: #FF4A4E; --brand-ink: #FF7A7D; --bg: #121212; --surface: #1C1C1C; --surface-2: #262626; --ink: #ECEEF2; --ink-2: #9BA6B2; --outline: #2A2A2A;
+          --live: #000000; --live-ink: #ECEEF2; --live-ink-2: #9BA6B2; --ok: #3DBE7E; --shadow-card: none; }
+  :root[data-theme="black"], .theme-black { --bg: #000; --surface: #121212; --surface-2: #1C1C1E; --live: #0A0A0A; }
+
+  /* Popup frame instead of a phone: Chrome gives an extension popup at most 800 × 600 px; we use 380 × 600. */
+  .phone.popup { width: 380px; height: 600px; border-radius: 14px; padding: 0; background: var(--bg); box-shadow: 0 12px 40px rgba(0,0,0,.22); }
+  .popup .screen { border-radius: 14px; font-family: "DM Sans", system-ui, sans-serif; font-size: 13px; }
+  .theme-dark .phone.popup { box-shadow: 0 0 0 1px var(--outline), 0 12px 40px rgba(0,0,0,.5); }
+  .popup .content { padding: 0 var(--keyline) 16px; }
+  .popup h1, .popup h2, .popup h3, .popup .num { font-family: "Space Grotesk", "DM Sans", sans-serif; font-weight: 700; letter-spacing: -.01em; margin: 0; }
+
+  /* Top bar: logo, wordmark, list pill, settings. One keyline at 16 px. */
+  .top { display: flex; align-items: center; gap: 10px; padding: 14px var(--keyline) 10px; }
+  .top .mark { width: 26px; height: 26px; flex: none; }
+  .top h1 { font-size: 17px; }
+  .top .sp { flex: 1; }
+  .ipill { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 30px; background: var(--surface); color: var(--ink); font-weight: 600; font-size: 12px; box-shadow: 0 1px 0 var(--outline); }
+  .theme-dark .ipill { box-shadow: 0 0 0 1px var(--outline); }
+  .ibtn { width: 30px; height: 30px; border-radius: 30px; background: var(--surface); display: grid; place-items: center; color: var(--ink); box-shadow: 0 1px 0 var(--outline); }
+  .ibtn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Live counter card, the hero: the one number, then one sentence, then today's progress. */
+  .live { background: var(--live); color: var(--live-ink); border-radius: var(--radius-card); padding: 14px 16px 14px; margin-top: 2px; }
+  .live .row1 { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--live-ink-2); }
+  .live .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 3px rgba(239,37,41,.25); animation: pulse 1.8s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 2px rgba(239,37,41,.15);} 50% { box-shadow: 0 0 0 5px rgba(239,37,41,.35);} }
+  .live .tag-live { font-weight: 700; letter-spacing: .08em; color: var(--live-ink); }
+  .live .delta { margin-left: auto; font-weight: 600; color: var(--live-ink); }
+  .live .num { font-size: 44px; line-height: 1; margin-top: 8px; font-variant-numeric: tabular-nums; display: flex; }
+  .live .num .d { display: inline-block; min-width: .58em; text-align: center; }
+  .live .num .sep { min-width: .25em; }
+  .live .what { color: var(--live-ink-2); margin-top: 4px; font-size: 12px; }
+  .live .today { margin-top: 12px; display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 600; }
+  .live .bar { flex: 1; height: 6px; border-radius: 6px; background: rgba(255,255,255,.12); overflow: hidden; }
+  .live .bar i { display: block; height: 100%; width: 25%; background: var(--brand); border-radius: 6px; transition: width 600ms cubic-bezier(.2,0,0,1); }
+
+  /* Network pills, same geometry as the site: 30 px, selected one black. */
+  /* The row bleeds to the popup edge and scrolls; the last pill is cut by the edge, which says "it scrolls". */
+  .nets { display: flex; gap: 6px; margin: 12px -16px 0; padding: 0 16px; overflow-x: auto; scrollbar-width: none; }
+  .nets .pill { height: 30px; padding: 0 11px; white-space: nowrap; flex: none; border-radius: 30px; background: var(--surface); color: var(--ink); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 0 var(--outline); }
+  .nets .pill b { font-weight: 500; color: var(--ink-2); }
+  .nets .pill.on { background: var(--ink); color: var(--bg); box-shadow: none; }
+  .nets .pill.on b { color: inherit; opacity: .7; }
+  .theme-dark .nets .pill { box-shadow: 0 0 0 1px var(--outline); }
+
+  /* The account being blocked now: the site's profile card. */
+  .popup .section-title { border: 0; padding: 0; background: none; }
+  .popup .section-title::before { content: none; display: none; }
+  .section-title { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin: 14px 0 8px; }
+  .acc { background: var(--surface); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: 14px 16px; position: relative; }
+  .theme-dark .acc { box-shadow: 0 0 0 1px var(--outline); }
+  .acc .eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--brand-ink); }
+  .acc .who { display: flex; gap: 12px; align-items: center; margin-top: 6px; }
+  .portrait { width: 44px; height: 44px; border-radius: 50%; background: var(--surface-2); color: var(--ink); display: grid; place-items: center; font: 700 15px "Space Grotesk", sans-serif; flex: none; }
+  .acc h2 { font-size: 18px; line-height: 1.15; }
+  .acc .handle { color: var(--ink-2); font-size: 12px; margin-top: 1px; }
+  .acc .note { color: var(--ink-2); font-size: 11px; margin-top: 8px; }
+  .acc .state { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-weight: 600; font-size: 12px; }
+  .spin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--outline); border-top-color: var(--brand); animation: spin .9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .stamp { position: absolute; right: 14px; top: 12px; padding: 4px 9px; border: 2px solid var(--ok); color: var(--ok); border-radius: 6px; font: 700 11px "Space Grotesk", sans-serif; letter-spacing: .08em; transform: rotate(-8deg) scale(1.6); opacity: 0; transition: transform 260ms cubic-bezier(.2,.9,.3,1.3), opacity 160ms; }
+  .next { margin-top: 10px; display: grid; gap: 6px; }
+  .next div { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--ink-2); padding: 6px 0; }
+  .next .portrait { width: 26px; height: 26px; font-size: 10px; }
+  .next b { color: var(--ink); font-weight: 600; }
+  .next span:last-child { margin-left: auto; font-size: 11px; }
+
+  /* The one loud control. */
+  .cta { height: 44px; border-radius: 30px; display: grid; place-items: center; font-weight: 700; font-size: 14px; margin-top: 14px; background: var(--brand); color: #fff; }
+  .cta.quiet { background: var(--ink); color: var(--bg); }
+  .cta.ghost { background: var(--surface); color: var(--ink); box-shadow: 0 1px 0 var(--outline); }
+  .foot { display: flex; justify-content: center; gap: 14px; font-size: 11px; color: var(--ink-2); margin-top: 10px; }
+
+  /* Skeleton: exactly the final layout, shimmering. Swapped by data-step. */
+  .sk { background: var(--surface-2); border-radius: 8px; }
+  .theme-dark .sk, .theme-dark .shimmer { --surface-2: #262626; --surface: #303030; }
+  .layer { transition: opacity 240ms ease; }
+  [data-step="loading"] .real { opacity: 0; }
+  .real { transition: opacity 360ms cubic-bezier(.2,0,0,1), transform 360ms cubic-bezier(.2,0,0,1); }
+  [data-step="loading"] .real.rise-in { transform: translateY(14px); }
+  .skl { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 200ms; }
+  [data-step="loading"] .skl { opacity: 1; }
+  [data-step="blocked"] .stamp, [data-step="done"] .stamp { opacity: 1; transform: rotate(-8deg) scale(1); }
+  [data-step="blocked"] .state .spin, [data-step="blocked"] .state .txt-run { display: none; }
+  .state .txt-ok { display: none; color: var(--ok); }
+  [data-step="blocked"] .state .txt-ok { display: inline; }
+  [data-step="blocked"] .live .bar i { width: 33%; }
+  .num .d { transition: transform 300ms cubic-bezier(.2,0,0,1); }
+  [data-step="blocked"] .num .d.tick { animation: tick 420ms cubic-bezier(.2,0,0,1); }
+  @keyframes tick { 0% { transform: translateY(0); } 50% { transform: translateY(-110%); opacity: 0; } 51% { transform: translateY(110%); } 100% { transform: translateY(0); opacity: 1; } }
+  .content { position: relative; }
+
+  /* List view. */
+  .search { height: 36px; border-radius: 30px; background: var(--surface); box-shadow: 0 1px 0 var(--outline); display: flex; align-items: center; gap: 8px; padding: 0 12px; color: var(--ink-2); font-size: 12px; margin-top: 4px; }
+  .theme-dark .search { box-shadow: 0 0 0 1px var(--outline); }
+  .cats { display: flex; gap: 2px; margin-top: 10px; font-size: 12px; font-weight: 600; color: var(--ink-2); border-bottom: 1px solid var(--outline); }
+  .cats span { padding: 6px 8px 8px; }
+  .cats .on { color: var(--ink); box-shadow: inset 0 -2px 0 var(--brand); }
+  .rows { margin-top: 6px; }
+  .rows div { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--outline); }
+  .rows .portrait { width: 32px; height: 32px; font-size: 11px; }
+  .rows > div > div { min-width: 0; }
+  .rows b { font-weight: 600; font-size: 13px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chip { white-space: nowrap; flex: none; }
+  .rows small { color: var(--ink-2); font-size: 11px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chip { margin-left: auto; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 30px; background: var(--surface-2); color: var(--ink-2); }
+  .chip.ok { background: rgba(30,142,90,.12); color: var(--ok); }
+  .chip.err { background: rgba(239,37,41,.12); color: var(--brand-ink); }
+  .src { font-size: 11px; color: var(--ink-2); margin-top: 10px; display: flex; justify-content: space-between; }
+
+  /* Option B: account first. */
+  .heroacc { background: var(--live); color: var(--live-ink); border-radius: var(--radius-card); padding: 18px 16px 16px; text-align: center; position: relative; margin-top: 2px; }
+  .ring { width: 92px; height: 92px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--brand) 0 25%, rgba(255,255,255,.12) 25% 100%); }
+  .ring .portrait { width: 78px; height: 78px; font-size: 24px; background: #2A2A2A; color: #fff; }
+  .heroacc h2 { font-size: 20px; margin-top: 12px; }
+  .heroacc .handle { color: var(--live-ink-2); font-size: 12px; }
+  .heroacc .eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--brand); margin-top: 8px; }
+  .heroacc .state { justify-content: center; }
+  .stat2 { display: flex; gap: 8px; margin-top: 10px; }
+  .stat2 div { flex: 1; background: var(--surface); border-radius: 12px; padding: 10px 12px; box-shadow: var(--shadow-card); }
+  .theme-dark .stat2 div { box-shadow: 0 0 0 1px var(--outline); }
+  .stat2 .num { font-size: 22px; }
+  .stat2 small { color: var(--ink-2); font-size: 11px; }
+
+  /* Option C: ticker, dark by design. */
+  .tick-screen { background: #0E0E0E; color: #ECEEF2; }
+  .tick-screen .top h1 { color: #fff; }
+  .tape { margin: 2px -16px 0; background: var(--brand); color: #fff; font: 700 11px "Space Grotesk", sans-serif; letter-spacing: .1em; padding: 6px 0; white-space: nowrap; overflow: hidden; }
+  .tape span { display: inline-block; animation: tape 14s linear infinite; }
+  @keyframes tape { to { transform: translateX(-50%); } }
+  .bignum { margin-top: 18px; text-align: center; }
+  .bignum .num { font-size: 64px; line-height: 1; color: #fff; justify-content: center; }
+  .bignum .what { color: #9BA6B2; font-size: 12px; margin-top: 4px; }
+  .queue { margin-top: 18px; display: grid; gap: 4px; }
+  .queue div { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; background: #181818; font-size: 13px; }
+  .queue .portrait { width: 30px; height: 30px; font-size: 10px; background: #2A2A2A; color: #fff; }
+  .queue b { font-weight: 600; }
+  .queue .now { outline: 1px solid var(--brand); }
+  .queue .st { margin-left: auto; font: 700 10px "Space Grotesk", sans-serif; letter-spacing: .08em; color: #9BA6B2; }
+  .queue .st.ok { color: var(--ok); }
+  .queue .st.now { color: var(--brand); }
+
+  /* Logo sandbox. */
+  .logos { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .logos > div { background: var(--bg); color: var(--ink); border-radius: 20px; padding: 24px 16px; text-align: center; }
+  .logos .cap { margin-top: 12px; font-size: 12px; color: var(--ink-2); }
+  .logos svg { width: 72px; height: 72px; }
+  .wordmark { font: 700 28px "Space Grotesk", sans-serif; letter-spacing: -.02em; display: inline-flex; align-items: center; gap: 2px; }
+  .wordmark svg { width: 24px; height: 24px; }
+
+  /* Today: the current popup, system UI. */
+  .today-ui { font: 13px/1.4 system-ui, sans-serif; padding: 12px 14px; }
+  .today-ui h1 { font: 700 15px system-ui; margin: 0 0 10px; }
+  .today-ui h2 { font: 600 12px system-ui; text-transform: uppercase; letter-spacing: .04em; opacity: .7; margin: 14px 0 6px; }
+  .today-ui .r { display: flex; gap: 6px; margin-bottom: 6px; }
+  .today-ui .in { flex: 1; border: 1px solid #999; border-radius: 3px; padding: 4px 7px; color: #888; }
+  .today-ui .b { padding: 5px 9px; border-radius: 6px; border: 1px solid rgba(128,128,128,.5); }
+  .today-ui .b.p { background: #c62828; color: #fff; border-color: #c62828; }
+  .today-ui .counts { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; text-align: center; margin-bottom: 8px; }
+  .today-ui .counts b { display: block; font-size: 18px; }
+  .today-ui .counts span { font-size: 11px; opacity: .7; }
+  .today-ui pre { font-size: 11px; margin: 0; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class="meta">Right Blocker · Chrome extension popup · mockup · 2026-10-28</div>
+  <h1>Popup: loading, the account on screen, a counter, the list</h1>
+  <p>The popup is a bare form today (URL field, four counters, buttons, a log). The target language is onbloquelextremedroite.fun: cream page, one red, Space Grotesk headings, a black live counter, 30 px pills, white 17 px cards. Copy inside the frames is French because the product ships in French.</p>
+</header>
+
+<div data-kit-toolbar data-states="loading,running,blocked,done"></div>
+
+<main>
+  <section class="option" id="today">
+    <h2>Today <span class="tag">current</span></h2>
+    <p class="why">What `src/popup/popup.html` draws now: system font, a URL field, counters with no hierarchy, a raw log. Nothing says who is being blocked.</p>
+    <div class="frames">
+      <div class="frame-wrap" data-themes="light" data-cap="Today, running">
+        <div class="phone popup"><div class="screen" style="background:#fff;color:#111"><div class="today-ui">
+          <h1>Right Blocker</h1>
+          <h2>Liste</h2>
+          <div class="r"><div class="in">https://exemple.org/blocklist.json</div><div class="b">Charger</div></div>
+          <div style="text-decoration:underline;font-size:12px">Charger un fichier local…</div>
+          <div style="opacity:.7;margin-top:4px">Source : fichier local</div>
+          <h2>File</h2>
+          <div class="counts"><div><b>248</b><span>profils</span></div><div><b>236</b><span>à faire</span></div><div><b>11</b><span>bloqués</span></div><div><b>1</b><span>erreurs</span></div></div>
+          <div style="opacity:.7">En cours : instagram @mlp_officiel</div>
+          <div class="r" style="margin-top:6px"><div class="b p">Démarrer</div><div class="b">Pause</div><div class="b">Retenter les erreurs</div></div>
+          <h2>Journal</h2>
+          <pre>10:42:08  instagram @bfmtv : blocked
+10:41:59  instagram @cnews : already
+10:41:50  x @jordanbardella : blocked
+10:41:41  File démarrée.</pre>
+        </div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="option" id="option-a">
+    <h2>Option A: The site, in a popup <span class="tag reco">recommended · effort S</span></h2>
+    <p class="why">Same page, same hierarchy: the black live counter is the hero, then the network pills, then the account being blocked as the site's own profile card, and one red CTA. The list and the settings sit behind two pills at the top. Trade-off: the counter takes a third of the popup, so only one account card fits above the fold.</p>
+    <div class="frames">
+
+      <div class="frame-wrap" data-themes="light dark" data-cap="Loading: the skeleton is the final layout">
+        <div class="phone popup"><div class="screen" data-step="loading"><div class="content">
+          <div class="top"><svg class="mark" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#EF2529"/><circle cx="16" cy="16" r="8.5" fill="none" stroke="#fff" stroke-width="3"/><path d="M10 10l12 12" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg><h1>On bloque.</h1><span class="sp"></span><span class="ipill">Liste <b style="color:var(--ink-2);font-weight:500">248</b></span><span class="ibtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span></div>
+          <div class="skl" style="top:56px">
+            <div style="padding:0 16px">
+              <div class="sk shimmer" style="height:132px;border-radius:17px"></div>
+              <div style="display:flex;gap:6px;margin-top:12px"><div class="sk shimmer" style="width:64px;height:30px;border-radius:30px"></div><div class="sk shimmer" style="width:92px;height:30px;border-radius:30px"></div><div class="sk shimmer" style="width:70px;height:30px;border-radius:30px"></div><div class="sk shimmer" style="width:84px;height:30px;border-radius:30px"></div></div>
+              <div class="sk shimmer" style="width:90px;height:11px;margin:16px 0 8px"></div>
+              <div class="sk shimmer" style="height:128px;border-radius:17px"></div>
+              <div class="sk shimmer" style="height:44px;border-radius:30px;margin-top:14px"></div>
+            </div>
+          </div>
+          <div class="real rise-in">
+            <div class="live"><div class="row1"><span class="dot"></span><span class="tag-live">EN DIRECT</span><span class="delta">+3 aujourd'hui</span></div><div class="num"><span class="d">1</span><span class="sep"></span><span class="d">0</span><span class="d">3</span><span class="d">4</span></div><div class="what">blocages depuis ce navigateur</div><div class="today"><span>Aujourd'hui : 3 / 12</span><span class="bar"><i></i></span></div></div>
+            <div class="nets"><span class="pill on">X <b>1 578</b></span><span class="pill">Instagram <b>889</b></span><span class="pill">TikTok <b>373</b></span><span class="pill">Facebook <b>872</b></span></div>
+            <div class="section-title">En cours</div>
+            <div class="acc"><div class="eyebrow">RN · Groupe RN à l'Assemblée</div><div class="who"><div class="portrait">ML</div><div><h2>Marine Le Pen</h2><div class="handle">@MLP_officiel · X</div></div></div><div class="note">≈ 3 048 949 abonnés · relevé du 28/10/2026</div><div class="state"><span class="spin"></span><span class="txt-run">Blocage en cours…</span><span class="txt-ok">✓ Bloqué il y a 2 s</span></div><div class="stamp">BLOQUÉ</div></div>
+            <div class="cta quiet">Pause</div>
+          </div>
+        </div></div></div>
+      </div>
+
+      <div class="frame-wrap" data-themes="light dark" data-cap="Running: name, handle, network, progress">
+        <div class="phone popup"><div class="screen" data-step="running"><div class="content">
+          <div class="top"><svg class="mark" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#EF2529"/><circle cx="16" cy="16" r="8.5" fill="none" stroke="#fff" stroke-width="3"/><path d="M10 10l12 12" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg><h1>On bloque.</h1><span class="sp"></span><span class="ipill">Liste <b style="color:var(--ink-2);font-weight:500">248</b></span><span class="ibtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span></div>
+          <div class="real">
+            <div class="live"><div class="row1"><span class="dot"></span><span class="tag-live">EN DIRECT</span><span class="delta">+3 aujourd'hui</span></div><div class="num"><span class="d">1</span><span class="sep"></span><span class="d">0</span><span class="d">3</span><span class="d">4</span></div><div class="what">blocages depuis ce navigateur</div><div class="today"><span>Aujourd'hui : 3 / 12</span><span class="bar"><i></i></span></div></div>
+            <div class="nets"><span class="pill on">X <b>1 578</b></span><span class="pill">Instagram <b>889</b></span><span class="pill">TikTok <b>373</b></span><span class="pill">Facebook <b>872</b></span></div>
+            <div class="section-title">En cours</div>
+            <div class="acc"><div class="eyebrow">RN · Groupe RN à l'Assemblée</div><div class="who"><div class="portrait">ML</div><div><h2>Marine Le Pen</h2><div class="handle">@MLP_officiel · X</div></div></div><div class="note">≈ 3 048 949 abonnés · relevé du 28/10/2026</div><div class="state"><span class="spin"></span><span class="txt-run">Blocage en cours…</span><span class="txt-ok">✓ Bloqué il y a 2 s</span></div><div class="stamp">BLOQUÉ</div></div>
+            <div class="next"><div><span class="portrait">JB</span><b>Jordan Bardella</b><span>@J_Bardella</span><span>à suivre</span></div><div><span class="portrait">CN</span><b>CNews</b><span>@CNEWS</span><span>puis</span></div></div>
+            <div class="cta quiet">Pause</div>
+          </div>
+        </div></div></div>
+      </div>
+
+      <div class="frame-wrap" data-cap="Motion · load → card rises → stamp, counter ticks">
+        <div class="phone popup"><div class="screen scene" data-steps="loading 1300, running 1500, blocked 2200"><div class="content">
+          <div class="top"><svg class="mark" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#EF2529"/><circle cx="16" cy="16" r="8.5" fill="none" stroke="#fff" stroke-width="3"/><path d="M10 10l12 12" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg><h1>On bloque.</h1><span class="sp"></span><span class="ipill">Liste <b style="color:var(--ink-2);font-weight:500">248</b></span><span class="ibtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg></span></div>
+          <div class="skl" style="top:56px">
+            <div style="padding:0 16px">
+              <div class="sk shimmer" style="height:132px;border-radius:17px"></div>
+              <div style="display:flex;gap:6px;margin-top:12px"><div class="sk shimmer" style="width:64px;height:30px;border-radius:30px"></div><div class="sk shimmer" style="width:92px;height:30px;border-radius:30px"></div><div class="sk shimmer" style="width:70px;height:30px;border-radius:30px"></div><div class="sk shimmer" style="width:84px;height:30px;border-radius:30px"></div></div>
+              <div class="sk shimmer" style="width:90px;height:11px;margin:16px 0 8px"></div>
+              <div class="sk shimmer" style="height:128px;border-radius:17px"></div>
+              <div class="sk shimmer" style="height:44px;border-radius:30px;margin-top:14px"></div>
+            </div>
+          </div>
+          <div class="real rise-in">
+            <div class="live"><div class="row1"><span class="dot"></span><span class="tag-live">EN DIRECT</span><span class="delta">+3 aujourd'hui</span></div><div class="num"><span class="d">1</span><span class="sep"></span><span class="d">0</span><span class="d">3</span><span class="d tick" data-from="4" data-to="5">4</span></div><div class="what">blocages depuis ce navigateur</div><div class="today"><span class="today-txt">Aujourd'hui : 3 / 12</span><span class="bar"><i></i></span></div></div>
+            <div class="nets"><span class="pill on">X <b>1 578</b></span><span class="pill">Instagram <b>889</b></span><span class="pill">TikTok <b>373</b></span><span class="pill">Facebook <b>872</b></span></div>
+            <div class="section-title">En cours</div>
+            <div class="acc"><div class="eyebrow">RN · Groupe RN à l'Assemblée</div><div class="who"><div class="portrait">ML</div><div><h2>Marine Le Pen</h2><div class="handle">@MLP_officiel · X</div></div></div><div class="note">≈ 3 048 949 abonnés · relevé du 28/10/2026</div><div class="state"><span class="spin"></span><span class="txt-run">Blocage en cours…</span><span class="txt-ok">✓ Bloqué il y a 2 s</span></div><div class="stamp">BLOQUÉ</div></div>
+            <div class="next"><div><span class="portrait">JB</span><b>Jordan Bardella</b><span>@J_Bardella</span><span>à suivre</span></div><div><span class="portrait">CN</span><b>CNews</b><span>@CNEWS</span><span>puis</span></div></div>
+            <div class="cta quiet">Pause</div>
+          </div>
+        </div></div></div>
+        <div class="storyboard">
+          <div><b>0 ms</b>skeleton, same boxes as the final layout, shimmer 1.2 s</div>
+          <div><b>list loaded</b>skeleton fades 200 ms; content fades + rises 14 px in 360 ms, emphasized</div>
+          <div><b>blocked</b>stamp lands (scale 1.6 → 1, 260 ms, slight overshoot); last digit flips 420 ms; today's bar grows 600 ms; spinner swaps for the green line</div>
+        </div>
+      </div>
+
+      <div class="frame-wrap" data-themes="light dark" data-cap="List: every account, filter, status">
+        <div class="phone popup"><div class="screen"><div class="content">
+          <div class="top"><span class="ibtn"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></span><h1>Liste <span style="color:var(--ink-2);font-weight:500;font-size:14px">248 comptes</span></h1><span class="sp"></span><span class="ipill">↻ 28/10</span></div>
+          <div class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>Chercher un nom ou un @</div>
+          <div class="nets" style="margin-top:10px"><span class="pill on">Tous</span><span class="pill">X</span><span class="pill">Instagram</span><span class="pill">TikTok</span></div>
+          <div class="cats"><span class="on">Tous</span><span>Politiques</span><span>Partis</span><span>Médias</span><span>Influenceurs</span></div>
+          <div class="rows">
+            <div><span class="portrait">ML</span><div><b>Marine Le Pen</b><small>@MLP_officiel · X</small></div><span class="chip ok">Bloqué</span></div>
+            <div><span class="portrait">JB</span><div><b>Jordan Bardella</b><small>@J_Bardella · X</small></div><span class="chip">À faire</span></div>
+            <div><span class="portrait">CN</span><div><b>CNews</b><small>@CNEWS · X</small></div><span class="chip ok">Déjà bloqué</span></div>
+            <div><span class="portrait">EZ</span><div><b>Éric Zemmour</b><small>@ZemmourEric · X</small></div><span class="chip err">Erreur</span></div>
+            <div><span class="portrait">BF</span><div><b>BFMTV</b><small>@bfmtv · Instagram</small></div><span class="chip">À faire</span></div>
+            <div><span class="portrait">RN</span><div><b>Rassemblement National</b><small>@RNational_off · X</small></div><span class="chip">À faire</span></div>
+            <div><span class="portrait">GP</span><div><b>Gilbert Collard</b><small>@GilbertCollard · X</small></div><span class="chip">À faire</span></div>
+          </div>
+          <div class="src"><span>Source : onbloquelextremedroite.fun</span><span>Mise à jour : 28/10, 10:40</span></div>
+        </div></div></div>
+      </div>
+
+      <div class="frame-wrap" data-themes="light dark" data-cap="Done, and the signed-out error">
+        <div class="phone popup"><div class="screen" data-step="done"><div class="content">
+          <div class="top"><svg class="mark" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#EF2529"/><circle cx="16" cy="16" r="8.5" fill="none" stroke="#fff" stroke-width="3"/><path d="M10 10l12 12" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg><h1>On bloque.</h1><span class="sp"></span><span class="ipill">Liste <b style="color:var(--ink-2);font-weight:500">248</b></span><span class="ibtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg></span></div>
+          <div class="real">
+            <div class="live"><div class="row1"><span class="dot" style="animation:none;background:var(--ok);box-shadow:none"></span><span class="tag-live">TERMINÉ</span><span class="delta">+12 aujourd'hui</span></div><div class="num"><span class="d">1</span><span class="sep"></span><span class="d">0</span><span class="d">4</span><span class="d">3</span></div><div class="what">blocages depuis ce navigateur</div><div class="today"><span>Aujourd'hui : 12 / 12</span><span class="bar"><i style="width:100%"></i></span></div></div>
+            <div class="nets"><span class="pill on">X <b>1 578</b></span><span class="pill">Instagram <b>889</b></span><span class="pill">TikTok <b>373</b></span><span class="pill">Facebook <b>872</b></span></div>
+            <div class="section-title">Bravo, c'est fait pour aujourd'hui</div>
+            <div class="acc"><div class="who"><div class="portrait" style="background:rgba(30,142,90,.12);color:var(--ok)">✓</div><div><h2>12 comptes bloqués</h2><div class="handle">On reprend demain, à ton rythme.</div></div></div></div>
+            <div class="section-title" style="margin-top:16px">Instagram</div>
+            <div class="acc" style="box-shadow:0 0 0 1px var(--brand-ink)"><div class="who"><div class="portrait" style="background:rgba(239,37,41,.12);color:var(--brand-ink)">!</div><div><h2 style="font-size:15px">Pas connecté à Instagram</h2><div class="handle">Connecte-toi dans l'onglet, puis reprends.</div></div></div><div class="cta ghost" style="height:36px;font-size:13px;margin-top:12px">Ouvrir instagram.com ↗</div></div>
+            <div class="cta" style="margin-top:14px">Partager le compteur ↗</div>
+          </div>
+        </div></div></div>
+      </div>
+
+    </div>
+    <div class="notes">
+      <div><b>What changes</b>One hero (the live counter, Space Grotesk 44 px, tabular digits), the site's pills and profile card, one red CTA. Name, handle and network of the account on screen; the two next names under it. The list is a second view behind the "Liste 248" pill.</div>
+      <div><b>In dark</b>Cream becomes #121212, cards #1C1C1C with a 1 px hairline instead of a shadow, red lifted to #FF4A4E, the live card goes true black so it still reads darker than the page.</div>
+      <div><b>Motion</b>Skeleton → content rise 360 ms (once); stamp 260 ms with overshoot; last digit flips; today's bar grows 600 ms; the live dot breathes 1.8 s, quietly.</div>
+      <div><b>Cost</b>S: two views, five states, no new data. The counter needs a daily tally in storage (new) and the list a name and category per handle (new fields in the JSON).</div>
+      <div><b>Risk</b>A long name ("Rassemblement National") stays on one line at 18 px up to 24 characters; longer wraps to two lines and the card grows 20 px, the CTA stays visible at 600 px.</div>
+    </div>
+  </section>
+
+  <section class="option" id="option-b">
+    <h2>Option B: The account first <span class="tag">effort M</span></h2>
+    <p class="why">The hero is the person being blocked: portrait inside a progress ring, name at 20 px, status under it. The counter becomes two small tiles. More human, and the daily cap is read in the ring. Trade-off: less "live wall" feeling than the site; initials in a ring look empty when the list has no portraits.</p>
+    <div class="frames">
+      <div class="frame-wrap" data-themes="light dark" data-cap="Running">
+        <div class="phone popup"><div class="screen" data-step="running"><div class="content">
+          <div class="top"><svg class="mark" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#EF2529"/><circle cx="16" cy="16" r="8.5" fill="none" stroke="#fff" stroke-width="3"/><path d="M10 10l12 12" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg><h1>On bloque.</h1><span class="sp"></span><span class="ipill">Liste <b style="color:var(--ink-2);font-weight:500">248</b></span><span class="ibtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg></span></div>
+          <div class="heroacc"><div class="ring"><div class="portrait">ML</div></div><h2>Marine Le Pen</h2><div class="handle">@MLP_officiel · X · ≈ 3 M abonnés</div><div class="eyebrow">RN · Groupe RN à l'Assemblée</div><div class="state" style="margin-top:10px;display:flex;align-items:center;gap:8px;font-weight:600;font-size:12px"><span class="spin" style="border-color:rgba(255,255,255,.2);border-top-color:var(--brand)"></span><span>Blocage en cours… 3 / 12 aujourd'hui</span></div></div>
+          <div class="stat2"><div><div class="num">1 034</div><small>blocages ici</small></div><div><div class="num">236</div><small>restent dans la liste</small></div></div>
+          <div class="section-title">À suivre</div>
+          <div class="next" style="margin-top:0"><div><span class="portrait">JB</span><b>Jordan Bardella</b><span>@J_Bardella · X</span></div><div><span class="portrait">CN</span><b>CNews</b><span>@CNEWS · X</span></div><div><span class="portrait">BF</span><b>BFMTV</b><span>@bfmtv · Instagram</span></div></div>
+          <div class="cta quiet">Pause</div>
+        </div></div></div>
+      </div>
+    </div>
+    <div class="notes">
+      <div><b>What changes</b>Hero = the account; ring = today's progress; two tiles for the totals; the next three names.</div>
+      <div><b>In dark</b>The hero card is already black; the tiles get the hairline.</div>
+      <div><b>Motion</b>Ring sweeps 400 ms on each block; portrait cross-fades to the next account (200 ms out, 60 ms gap, 200 ms in).</div>
+      <div><b>Cost</b>M: a ring component, portraits or initials, the cross-fade.</div>
+    </div>
+  </section>
+
+  <section class="option" id="option-c">
+    <h2>Option C: The ticker <span class="tag creative">most creative · effort M</span></h2>
+    <p class="why">Dark only, like a newsroom wall: a red tape of the last names blocked scrolls under the header, the counter is the whole hero at 64 px, the queue is a list where the current row is outlined in red and each done row gets a small green stamp. Reads as a live action. Trade-off: no light theme, and the tape is decoration that must never touch the number.</p>
+    <div class="frames">
+      <div class="frame-wrap" data-themes="dark" data-cap="Running">
+        <div class="phone popup"><div class="screen tick-screen" data-step="running"><div class="content">
+          <div class="top"><svg class="mark" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#EF2529"/><circle cx="16" cy="16" r="8.5" fill="none" stroke="#fff" stroke-width="3"/><path d="M10 10l12 12" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg><h1>On bloque.</h1><span class="sp"></span><span class="ipill" style="background:#181818;color:#fff;box-shadow:none">Liste 248</span></div>
+          <div class="tape" data-deco><span>BLOQUÉ · MARINE LE PEN &nbsp;·&nbsp; BLOQUÉ · CNEWS &nbsp;·&nbsp; BLOQUÉ · JORDAN BARDELLA &nbsp;·&nbsp; BLOQUÉ · BFMTV &nbsp;·&nbsp; BLOQUÉ · MARINE LE PEN &nbsp;·&nbsp; BLOQUÉ · CNEWS &nbsp;·&nbsp; BLOQUÉ · JORDAN BARDELLA &nbsp;·&nbsp; BLOQUÉ · BFMTV &nbsp;·&nbsp; </span></div>
+          <div class="bignum"><div class="num">1 034</div><div class="what">blocages depuis ce navigateur · aujourd'hui 3 / 12</div></div>
+          <div class="queue">
+            <div><span class="portrait">CN</span><b>CNews</b><span class="st ok">BLOQUÉ</span></div>
+            <div class="now"><span class="portrait">ML</span><b>Marine Le Pen</b><span class="st now">EN COURS</span></div>
+            <div><span class="portrait">JB</span><b>Jordan Bardella</b><span class="st">SUIVANT</span></div>
+            <div><span class="portrait">BF</span><b>BFMTV</b><span class="st">PUIS</span></div>
+            <div><span class="portrait">RN</span><b>Rassemblement National</b><span class="st">PUIS</span></div>
+          </div>
+          <div class="cta">Pause</div>
+        </div></div></div>
+      </div>
+    </div>
+    <div class="notes">
+      <div><b>What changes</b>Dark by design, tape of names, 64 px counter as the only hero, queue with the current row outlined.</div>
+      <div><b>Motion</b>Tape drifts 14 s per loop; a finished row slides up 200 ms and its stamp pops; the counter flips its last digit.</div>
+      <div><b>Cost</b>M. <b style="display:inline;text-transform:none;letter-spacing:0;font-size:13px;color:inherit">Risk:</b> the tape is close to a "spectacle"; keep it 8 px clear of the number and let it pause when the queue is idle.</div>
+    </div>
+  </section>
+
+  <section class="option" id="logo">
+    <h2>Logo: three marks, one variable each <span class="tag">effort S</span></h2>
+    <p class="why">The product gesture is the block sign (a ring with a bar), nothing else. A: red tile, white sign. B: same sign, inverted on black. C: the wordmark "On bloque." with the sign as the first o. Recommended: A as the icon, C in the popup header.</p>
+    <div class="sandbox logos">
+      <div><svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#EF2529"/><circle cx="16" cy="16" r="8.5" fill="none" stroke="#fff" stroke-width="3"/><path d="M10 10l12 12" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg><div class="cap">A: red tile, white block sign (recommended icon)</div></div>
+      <div><svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#171717"/><circle cx="16" cy="16" r="8.5" fill="none" stroke="#EF2529" stroke-width="3"/><path d="M10 10l12 12" stroke="#EF2529" stroke-width="3" stroke-linecap="round"/></svg><div class="cap">B: black tile, red sign (quieter in a toolbar)</div></div>
+      <div><span class="wordmark"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="none" stroke="#EF2529" stroke-width="5"/><path d="M8.5 8.5l15 15" stroke="#EF2529" stroke-width="5" stroke-linecap="round"/></svg>n bloque.</span><div class="cap">C: wordmark, the sign is the o (header)</div></div>
+    </div>
+  </section>
+
+  <section class="option rules" id="rules">
+    <h2>Rules</h2>
+    <ol>
+      <li>One number means one thing: the big counter is blocks made from this browser; the site's shared counter, if shown, is named as such.</li>
+      <li>The account on screen is always named: name, handle, network. Never a bare handle.</li>
+      <li>The daily cap (12 by default) is read in one place, today's bar, and the CTA says what it will do ("Démarrer", "Pause", "Reprendre").</li>
+      <li>Loading is the skeleton of the final layout; nothing pops, the content rises once.</li>
+      <li>Every state has a card: loading, running, blocked, done, signed out, error on one account, empty list.</li>
+      <li>No system font: DM Sans and Space Grotesk, bundled with the extension (4 files), since a popup must not depend on Google Fonts.</li>
+    </ol>
+  </section>
+  <section class="option open" id="open">
+    <h2>Open decisions</h2>
+    <ul>
+      <li>Where the list comes from: the site has no public JSON today; proposed default is our own JSON on a static host, with name, handle, network, category per entry (cost of asking the site's authors: a few days of waiting).</li>
+      <li>Daily cap: the site asks for 3 by hand; the extension can do 12 at a human pace. Proposed default 12, changeable in Settings (cost: one field).</li>
+      <li>Portraits: initials only (no requests to the networks) or the profile picture fetched by the driver when it is on the page (cost: storage of a 44 px thumbnail per handle).</li>
+      <li>Shared counter: declare each block to a server like the site does, or stay local. Proposed: local first; "Partager le compteur" copies a sentence.</li>
+    </ul>
+    <h2 style="margin-top:18px">What I would not do</h2>
+    <ul>
+      <li>Show the log in the popup: it belongs in Settings, behind "Journal".</li>
+      <li>Both counters at the same size (site total and local): one hero, one sentence.</li>
+    </ul>
+  </section>
+</main>
+<script src="mockup-kit.js"></script>
+</body>
+</html>
