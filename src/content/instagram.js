@@ -2,6 +2,9 @@
 // Instagram n'a pas de data-testid stables : le driver se repère aux libellés
 // (anglais et français) et aux aria-label des icônes. Chemin : bouton Options
 // du profil, Bloquer dans la feuille, Bloquer dans la confirmation, fermer.
+// Vérifié dans Chrome connecté (interface anglaise) le 28/10/2026 : le bouton
+// Options est un div role=button dont le svg porte aria-label « Options »,
+// la feuille liste Block, Restrict, Report, Share to..., About this account.
 //
 // Statuts : blocked, already, missing, self, mismatch, logged-out, error.
 
@@ -44,8 +47,10 @@
     return words.some((w) => body.includes(w));
   }
 
+  // Instagram laisse parfois un dialogue fermé dans le DOM le temps d'une
+  // transition : on ne regarde que les dialogues visibles.
   function lastDialog() {
-    const dialogs = document.querySelectorAll('[role="dialog"]');
+    const dialogs = [...document.querySelectorAll('[role="dialog"]')].filter(visible);
     return dialogs.length ? dialogs[dialogs.length - 1] : null;
   }
 
@@ -110,7 +115,8 @@
     await jitter(300, 700);
     click(findButton(WORDS.block, sheet));
 
-    // La confirmation est un nouveau dialogue, avec son propre bouton Bloquer.
+    // La confirmation est un nouveau dialogue qui remplace la feuille
+    // (observé le 28/10/2026 : « Block <nom>? », boutons Block et Cancel).
     const confirm = await waitFor(() => {
       const d = lastDialog();
       if (!d || d === sheet) return null;
