@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Right Blocker</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <h1>Right Blocker</h1>
+
+  <section>
+    <h2>Liste</h2>
+    <div class="row">
+      <input id="url" type="url" placeholder="https://exemple.org/blocklist.json">
+      <button id="load-url">Charger</button>
+    </div>
+    <div class="row">
+      <label class="file">
+        <input id="file" type="file" accept=".json,application/json">
+        <span>Charger un fichier local…</span>
+      </label>
+    </div>
+    <p id="source" class="muted"></p>
+  </section>
+
+  <section>
+    <h2>File</h2>
+    <div class="counts">
+      <div><b id="n-total">0</b><span>profils</span></div>
+      <div><b id="n-pending">0</b><span>à faire</span></div>
+      <div><b id="n-blocked">0</b><span>bloqués</span></div>
+      <div><b id="n-error">0</b><span>erreurs</span></div>
+    </div>
+    <p id="current" class="muted"></p>
+    <div class="row">
+      <button id="start" class="primary">Démarrer</button>
+      <button id="pause">Pause</button>
+      <button id="retry">Retenter les erreurs</button>
+      <button id="reset" class="danger">Tout retenter</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Journal</h2>
+    <pre id="log"></pre>
+  </section>
+
+  <script src="popup.js"></script>
+</body>
+</html>

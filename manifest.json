@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Right Blocker",
+  "version": "0.1.0",
+  "description": "Bloque une liste de profils sur X, dans l'onglet où vous êtes déjà connecté.",
+  "permissions": ["storage", "alarms", "tabs"],
+  "host_permissions": ["https://x.com/*", "https://twitter.com/*"],
+  "background": { "service_worker": "src/background.js", "type": "module" },
+  "action": { "default_popup": "src/popup/popup.html", "default_title": "Right Blocker" },
+  "content_scripts": [
+    {
+      "matches": ["https://x.com/*", "https://twitter.com/*"],
+      "js": ["src/content/x.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": { "128": "icons/icon128.png" }
+}

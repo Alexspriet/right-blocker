@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "updated": "2026-10-28",
+  "profiles": [
+    { "network": "x", "handle": "exemple_un" },
+    { "network": "x", "handle": "exemple_deux" }
+  ]
+}
