@@ -9,14 +9,21 @@ const BLOCK_TIMEOUT_MS = 20000;            // attente max du driver
 const REFRESH_ALARM = 'refresh-list';
 const WATCHDOG_ALARM = 'watchdog';
 
+// Réseaux pris en charge : un driver par réseau dans src/content/.
+const NETWORKS = {
+  x: { home: 'https://x.com/home', profile: (h) => `https://x.com/${h}` },
+  instagram: { home: 'https://www.instagram.com/', profile: (h) => `https://www.instagram.com/${h}/` },
+};
+const key = (p) => `${p.network}:${p.handle}`;
+
 const DEFAULTS = {
   source: { kind: 'none', url: '' },  // kind: 'none' | 'url' | 'file'
   list: { version: 0, updated: null, profiles: [] },
-  done: {},                           // handle -> { status, at }
+  done: {},                           // "réseau:handle" -> { status, at }
   running: false,
-  current: null,                      // handle en cours
+  current: null,                      // profil en cours { network, handle }
   lastActivity: 0,
-  workerTabId: null,
+  workerTabs: {},                     // réseau -> id d'onglet
   log: [],                            // dernières lignes, les plus récentes en tête
 };
 
@@ -66,8 +73,11 @@ async function refreshFromUrl() {
 
 // ---------- file de blocage ----------
 
+function isPending(state, p) {
+  return NETWORKS[p.network] && !state.done[key(p)];
+}
 function nextPending(state) {
-  return state.list.profiles.find((p) => p.network === 'x' && !state.done[p.handle]) || null;
+  return state.list.profiles.find((p) => isPending(state, p)) || null;
 }
 
 function sleep(ms) {
@@ -78,16 +88,17 @@ function pace() {
   return PACE.minMs + Math.random() * (PACE.maxMs - PACE.minMs);
 }
 
-async function workerTab() {
+async function workerTab(network) {
   const state = await getState();
-  if (state.workerTabId != null) {
+  const id = state.workerTabs[network];
+  if (id != null) {
     try {
-      const tab = await chrome.tabs.get(state.workerTabId);
+      const tab = await chrome.tabs.get(id);
       if (tab) return tab;
     } catch (_) { /* onglet fermé */ }
   }
-  const tab = await chrome.tabs.create({ url: 'https://x.com/home', active: false });
-  await setState({ workerTabId: tab.id });
+  const tab = await chrome.tabs.create({ url: NETWORKS[network].home, active: false });
+  await setState({ workerTabs: { ...state.workerTabs, [network]: tab.id } });
   return tab;
 }
 
@@ -108,14 +119,14 @@ function waitForLoad(tabId, timeoutMs) {
   });
 }
 
-async function askDriver(tabId, handle) {
+async function askDriver(tabId, network, handle) {
   // Le script de contenu peut ne pas être prêt juste après le chargement :
   // on réessaie quelques fois.
   const deadline = Date.now() + BLOCK_TIMEOUT_MS;
   let lastErr = null;
   while (Date.now() < deadline) {
     try {
-      const res = await chrome.tabs.sendMessage(tabId, { type: 'x:block', handle });
+      const res = await chrome.tabs.sendMessage(tabId, { type: 'block', network, handle });
       if (res && res.status) return res;
       lastErr = new Error('réponse vide du driver');
     } catch (e) {
@@ -141,29 +152,30 @@ async function runLoop() {
         await log('File terminée : plus rien à bloquer.');
         break;
       }
-      await setState({ current: next.handle, lastActivity: Date.now() });
+      await setState({ current: next, lastActivity: Date.now() });
+      const label = `${next.network} @${next.handle}`;
       let status = 'error';
       try {
-        const tab = await workerTab();
-        await chrome.tabs.update(tab.id, { url: `https://x.com/${next.handle}` });
+        const tab = await workerTab(next.network);
+        await chrome.tabs.update(tab.id, { url: NETWORKS[next.network].profile(next.handle) });
         await waitForLoad(tab.id, PAGE_TIMEOUT_MS);
         await sleep(1200 + Math.random() * 800);
-        const res = await askDriver(tab.id, next.handle);
+        const res = await askDriver(tab.id, next.network, next.handle);
         status = res.status;
-        await log(`@${next.handle} : ${status}${res.detail ? ' (' + res.detail + ')' : ''}`);
+        await log(`${label} : ${status}${res.detail ? ' (' + res.detail + ')' : ''}`);
       } catch (e) {
         status = 'error';
-        await log(`@${next.handle} : erreur, ${e.message}`);
+        await log(`${label} : erreur, ${e.message}`);
       }
       const s = await getState();
       await setState({
-        done: { ...s.done, [next.handle]: { status, at: Date.now() } },
+        done: { ...s.done, [key(next)]: { status, at: Date.now() } },
         current: null,
         lastActivity: Date.now(),
       });
       if (status === 'logged-out') {
         await setState({ running: false });
-        await log('Pas connecté à X dans cet onglet : file mise en pause.');
+        await log(`Pas connecté à ${next.network} dans cet onglet : file mise en pause.`);
         break;
       }
       await sleep(pace());
@@ -180,8 +192,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     switch (msg.type) {
       case 'get-state': {
         const s = await getState();
-        const pending = s.list.profiles.filter((p) => p.network === 'x' && !s.done[p.handle]).length;
-        return { ...s, pending };
+        const pending = s.list.profiles.filter((p) => isPending(s, p)).length;
+        const unsupported = s.list.profiles.filter((p) => !NETWORKS[p.network]).length;
+        return { ...s, pending, unsupported, networks: Object.keys(NETWORKS) };
       }
       case 'set-url': {
         await setState({ source: { kind: 'url', url: msg.url } });

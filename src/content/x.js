@@ -87,7 +87,7 @@
   }
 
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-    if (msg.type !== 'x:block') return false;
+    if (msg.type !== 'block' || msg.network !== 'x') return false;
     blockProfile(msg.handle)
       .then(sendResponse)
       .catch((e) => sendResponse({ status: 'error', detail: e.message }));

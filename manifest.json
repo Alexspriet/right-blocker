@@ -2,15 +2,20 @@
   "manifest_version": 3,
   "name": "Right Blocker",
   "version": "0.1.0",
-  "description": "Bloque une liste de profils sur X, dans l'onglet où vous êtes déjà connecté.",
+  "description": "Bloque une liste de profils sur X et Instagram, dans les onglets où vous êtes déjà connecté.",
   "permissions": ["storage", "alarms", "tabs"],
-  "host_permissions": ["https://x.com/*", "https://twitter.com/*"],
+  "host_permissions": ["https://x.com/*", "https://twitter.com/*", "https://www.instagram.com/*"],
   "background": { "service_worker": "src/background.js", "type": "module" },
   "action": { "default_popup": "src/popup/popup.html", "default_title": "Right Blocker" },
   "content_scripts": [
     {
       "matches": ["https://x.com/*", "https://twitter.com/*"],
       "js": ["src/content/x.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.instagram.com/*"],
+      "js": ["src/content/instagram.js"],
       "run_at": "document_idle"
     }
   ],

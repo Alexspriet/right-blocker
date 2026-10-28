@@ -14,8 +14,8 @@ async function refresh() {
     s.source.kind === 'file' ? 'Source : fichier local' : 'Aucune liste chargée.';
   if (s.source.kind === 'url' && !$('url').value) $('url').value = s.source.url;
   $('current').textContent = s.running
-    ? (s.current ? `En cours : @${s.current}` : 'En cours…')
-    : 'À l’arrêt.';
+    ? (s.current ? `En cours : ${s.current.network} @${s.current.handle}` : 'En cours…')
+    : (s.unsupported ? `À l’arrêt. ${s.unsupported} profil(s) sur un réseau non géré (gérés : ${s.networks.join(', ')}).` : 'À l’arrêt.');
   $('start').disabled = s.running || s.pending === 0;
   $('pause').disabled = !s.running;
   $('log').textContent = s.log.join('\n');
