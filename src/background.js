@@ -28,15 +28,17 @@ const DEFAULTS = {
   workerTabs: {},                     // réseau -> id d'onglet
   log: [],                            // dernières lignes, les plus récentes en tête
   total: 0,                           // blocages réussis depuis ce navigateur
-  daily: { date: '', count: 0 },      // blocages du jour
-  settings: { dailyCap: 12 },         // plafond quotidien, à rythme humain
+  daily: { date: '', count: 0, byNetwork: {} }, // blocages du jour, en tout et par réseau
+  settings: { dailyCap: 20 },         // plafond quotidien par réseau, à rythme humain
   loading: false,                     // liste en cours de chargement
 };
 
 const todayKey = () => new Date().toISOString().slice(0, 10);
 function dailyOf(state) {
-  return state.daily.date === todayKey() ? state.daily : { date: todayKey(), count: 0 };
+  const d = state.daily.date === todayKey() ? state.daily : { date: todayKey(), count: 0, byNetwork: {} };
+  return { ...d, byNetwork: d.byNetwork || {} };
 }
+const roomFor = (state, daily, network) => (daily.byNetwork[network] || 0) < state.settings.dailyCap;
 
 async function getState() {
   const stored = await chrome.storage.local.get(Object.keys(DEFAULTS));
@@ -95,8 +97,9 @@ async function refreshFromUrl() {
 function isPending(state, p) {
   return NETWORKS[p.network] && !state.done[key(p)];
 }
-function nextPending(state) {
-  return state.list.profiles.find((p) => isPending(state, p)) || null;
+// Le prochain profil d'un réseau qui n'a pas atteint son plafond du jour.
+function nextPending(state, daily) {
+  return state.list.profiles.find((p) => isPending(state, p) && (!daily || roomFor(state, daily, p.network))) || null;
 }
 
 function sleep(ms) {
@@ -166,15 +169,16 @@ async function runLoop() {
       const state = await getState();
       if (!state.running) break;
       const daily = dailyOf(state);
-      if (daily.count >= state.settings.dailyCap) {
-        await setState({ running: false, current: null, stopReason: 'cap', daily });
-        await log(`Plafond du jour atteint (${state.settings.dailyCap}) : on reprend demain.`);
-        break;
-      }
-      const next = nextPending(state);
+      const next = nextPending(state, daily);
       if (!next) {
-        await setState({ running: false, current: null, stopReason: 'done' });
-        await log('File terminée : plus rien à bloquer.');
+        const anyLeft = nextPending(state, null);
+        if (anyLeft) {
+          await setState({ running: false, current: null, stopReason: 'cap', daily });
+          await log(`Plafond du jour atteint (${state.settings.dailyCap} par réseau) : on reprend demain.`);
+        } else {
+          await setState({ running: false, current: null, stopReason: 'done' });
+          await log('File terminée : plus rien à bloquer.');
+        }
         break;
       }
       await setState({ current: next, lastActivity: Date.now() });
@@ -199,7 +203,7 @@ async function runLoop() {
         done: { ...s.done, [key(next)]: { status, at: Date.now() } },
         lastResult: { key: key(next), status, at: Date.now() },
         total: s.total + (blocked ? 1 : 0),
-        daily: { date: d.date, count: d.count + (blocked ? 1 : 0) },
+        daily: { date: d.date, count: d.count + (blocked ? 1 : 0), byNetwork: { ...d.byNetwork, [next.network]: (d.byNetwork[next.network] || 0) + (blocked ? 1 : 0) } },
         current: null,
         lastActivity: Date.now(),
       });
@@ -224,8 +228,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const s = await getState();
         const pending = s.list.profiles.filter((p) => isPending(s, p)).length;
         const unsupported = s.list.profiles.filter((p) => !NETWORKS[p.network]).length;
-        const upNext = s.list.profiles.filter((p) => isPending(s, p) && !(s.current && key(p) === key(s.current))).slice(0, 2);
-        return { ...s, daily: dailyOf(s), pending, unsupported, upNext, networks: Object.keys(NETWORKS) };
+        return { ...s, daily: dailyOf(s), pending, unsupported, networks: Object.keys(NETWORKS) };
       }
       case 'set-url': {
         await setState({ source: { kind: 'url', url: msg.url } });

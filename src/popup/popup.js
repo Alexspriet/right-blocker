@@ -40,13 +40,19 @@ function renderNum(total) {
   lastTotal = total;
 }
 
+const listNetworks = () => [...new Set(state.list.profiles.map((p) => p.network))].filter((n) => state.networks.includes(n));
+const todayOn = (n) => (state.daily.byNetwork || {})[n] || 0;
+const roomOn = (n) => Math.max(0, state.settings.dailyCap - todayOn(n));
+
 function renderLive() {
   const cap = state.settings.dailyCap;
+  const nets = listNetworks();
   const n = state.daily.count;
+  const capAll = cap * Math.max(1, nets.length);
   renderNum(state.total);
   $('delta').textContent = `+${n} aujourd'hui`;
-  $('today-txt').textContent = `Aujourd'hui : ${n} / ${cap}`;
-  $('today-bar').style.width = `${Math.min(100, (n / cap) * 100)}%`;
+  $('today-txt').textContent = `Aujourd'hui : ${n} / ${capAll}`;
+  $('today-bar').style.width = `${Math.min(100, (n / capAll) * 100)}%`;
   const dot = $('live-dot');
   const tag = $('live-tag');
   if (state.running) { dot.className = 'dot'; tag.textContent = 'EN DIRECT'; }
@@ -60,9 +66,9 @@ function netCounts() {
   return Object.entries(counts).sort((a, b) => b[1] - a[1]);
 }
 
-function renderNets(container, selected, onPick) {
+function renderNets(container, selected, onPick, today = false) {
   container.innerHTML = netCounts().map(([n, c]) =>
-    `<button class="pill${selected === n ? ' on' : ''}" data-net="${esc(n)}">${esc(netLabel(n))} <b>${fmt(c)}</b></button>`).join('');
+    `<button class="pill${selected === n ? ' on' : ''}" data-net="${esc(n)}" title="${esc(netLabel(n))} : ${fmt(c)} dans la liste">${esc(netLabel(n))} <b>${today ? `${todayOn(n)} / ${state.settings.dailyCap}` : fmt(c)}</b></button>`).join('');
   container.querySelectorAll('button').forEach((b) => { b.onclick = () => onPick(b.dataset.net); });
 }
 
@@ -81,8 +87,11 @@ function renderMain() {
   const fresh = state.lastResult && Date.now() - state.lastResult.at < STAMP_MS ? state.lastResult : null;
   const freshP = fresh ? profileOf(fresh.key) : null;
   const pending = pendingList();
+  // Ce que le jour permet encore : les profils en attente, réseau par réseau, dans le plafond.
   const upNext = pending.filter((p) => !(state.current && key(p) === key(state.current)));
-  const remaining = Math.max(0, state.settings.dailyCap - state.daily.count);
+  const room = {};
+  const todayQueue = upNext.filter((p) => { room[p.network] = room[p.network] ?? roomOn(p.network); if (room[p.network] <= 0) return false; room[p.network]--; return true; });
+  const remaining = listNetworks().reduce((a, k) => a + roomOn(k), 0);
   let selectedNet = null;
   document.body.dataset.step = fresh && fresh.status === 'blocked' ? 'blocked' : 'ready';
   card.className = 'acc';
@@ -130,19 +139,20 @@ function renderMain() {
     title.textContent = 'À suivre';
     const p = upNext[0];
     selectedNet = p ? p.network : null;
-    card.innerHTML = p ? accountCard(p, `<div class="state muted">${fmt(pending.length)} compte${pending.length > 1 ? 's' : ''} dans la liste, ${remaining} encore aujourd'hui</div>`) : '';
+    card.innerHTML = p ? accountCard(p, `<div class="state muted">${fmt(pending.length)} compte${pending.length > 1 ? 's' : ''} dans la liste, ${todayQueue.length} encore aujourd'hui</div>`) : '';
     const started = Object.keys(state.done).length > 0;
     cta.textContent = started ? 'Reprendre' : 'Démarrer'; cta.className = 'cta'; cta.disabled = false; cta.onclick = () => send({ type: 'start' }).then(refresh);
   }
 
   // À bloquer aujourd'hui : ce qui reste dans le plafond du jour, sans le compte affiché.
   const shown = freshP || state.current || (state.running ? upNext[0] : (!state.stopReason || state.stopReason === 'user' ? upNext[0] : null));
-  const todo = upNext.filter((p) => !shown || key(p) !== key(shown)).slice(0, Math.max(0, remaining - (shown && !freshP ? 1 : 0)));
-  $('todo-title').textContent = `À bloquer aujourd'hui · ${todo.length + (shown && !freshP ? 1 : 0)}`;
+  const shownCounts = shown && !freshP && todayQueue.concat(state.current ? [state.current] : []).some((p) => key(p) === key(shown)) ? 1 : 0;
+  const todo = todayQueue.filter((p) => !shown || key(p) !== key(shown));
+  $('todo-title').textContent = `À bloquer aujourd'hui · ${todo.length + shownCounts}`;
   $('todo-title').hidden = !state.list.profiles.length;
   $('todo').innerHTML = todo.length
     ? todo.map((p) => `<div><span class="portrait">${esc(initials(p))}</span><b>${esc(p.name || '@' + p.handle)}</b><span class="h">@${esc(p.handle)} · ${esc(netLabel(p.network))}</span></div>`).join('')
-    : `<div class="empty">${remaining === 0 ? 'Plafond du jour atteint, on reprend demain.' : pending.length ? 'Rien d’autre aujourd’hui.' : 'Rien à bloquer.'}</div>`;
+    : `<div class="empty">${pending.length && remaining === 0 ? 'Plafond du jour atteint, on reprend demain.' : pending.length ? 'Plafond atteint sur ce réseau, on reprend demain.' : 'Rien à bloquer.'}</div>`;
 
   // Fait aujourd'hui : les comptes traités depuis minuit, les plus récents en tête.
   const since = startOfToday();
@@ -153,7 +163,7 @@ function renderMain() {
   $('done-today').innerHTML = doneToday.length
     ? doneToday.map(({ p, v }) => { const [label, tone] = STATUS_LABEL[v.status] || ['Erreur', 'err']; return `<div><span class="portrait">${esc(initials(p))}</span><b>${esc(p.name || '@' + p.handle)}</b><span class="h">@${esc(p.handle)} · ${esc(netLabel(p.network))}</span><span class="chip ${tone}">${esc(label)}</span></div>`; }).join('')
     : `<div class="empty">Rien encore aujourd'hui.</div>`;
-  renderNets($('nets'), selectedNet, (n) => { filter.net = n; view('list'); });
+  renderNets($('nets'), selectedNet, (n) => { filter.net = n; view('list'); }, true);
 }
 
 // ---------- vue liste ----------

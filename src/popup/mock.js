@@ -13,15 +13,15 @@
   ];
   const base = { source: { kind: 'url', url: 'https://onbloquelextremedroite.fun/liste.json' }, list: { version: 2, updated: '28/10/2026', profiles },
     done: { 'x:cnews': { status: 'already', at: Date.now() - 60000 }, 'x:zemmoureric': { status: 'error', at: Date.now() - 30000 }, 'tiktok:gilbertcollard': { status: 'blocked', at: Date.now() - 900000 } },
-    running: false, stopReason: null, current: null, lastResult: null, total: 1034, daily: { date: '', count: 3 }, settings: { dailyCap: 12 },
+    running: false, stopReason: null, current: null, lastResult: null, total: 1034, daily: { date: '', count: 3, byNetwork: { x: 2, tiktok: 1 } }, settings: { dailyCap: 20 },
     loading: false, log: ['11:20:08  x @cnews : already', '11:19:50  File démarrée.'], networks: ['x', 'instagram'] };
   const S = {
     loading: { ...base, loading: true },
     idle: { ...base },
     empty: { ...base, list: { version: 0, updated: null, profiles: [] } },
     running: { ...base, running: true, current: profiles[0] },
-    blocked: { ...base, running: true, lastResult: { key: 'x:mlp_officiel', status: 'blocked', at: Date.now() + 1500 }, total: 1035, daily: { date: '', count: 4 } },
-    cap: { ...base, stopReason: 'cap', daily: { date: '', count: 12 }, settings: { dailyCap: 3 } },
+    blocked: { ...base, running: true, lastResult: { key: 'x:mlp_officiel', status: 'blocked', at: Date.now() + 1500 }, total: 1035, daily: { date: '', count: 4, byNetwork: { x: 3, tiktok: 1 } } },
+    cap: { ...base, stopReason: 'cap', daily: { date: '', count: 4, byNetwork: { x: 3, tiktok: 1, instagram: 0 } }, settings: { dailyCap: 3 } },
     loggedout: { ...base, stopReason: 'logged-out', lastResult: { key: 'instagram:bfmtv', status: 'logged-out', at: Date.now() - 9000 } },
   }[scenario];
   const pendingOf = (s) => s.list.profiles.filter((p) => !s.done[`${p.network}:${p.handle}`]);

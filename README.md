@@ -69,6 +69,7 @@ icône, C en en-tête).
 - Les sélecteurs `data-testid` de X changent parfois : le driver les tient
   en tête de fichier. Instagram n'en a pas : son driver lit les libellés
   (anglais et français, table `WORDS` en tête de fichier).
-- Le rythme est volontairement lent. Des rafales font suspendre le compte.
+- Le rythme est volontairement lent : 4 à 9 secondes entre deux blocages et
+  20 par jour et par réseau (réglable). Des rafales font suspendre le compte.
 - Firefox : le manifeste fonctionne, mais `background.type: module` demande
   Firefox 121 ou plus récent.
