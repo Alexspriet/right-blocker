@@ -126,7 +126,9 @@
     await jitter(300, 700);
     click(confirm);
 
-    // Instagram affiche ensuite « Bloqué » avec un bouton pour fermer.
+    // Instagram affiche ensuite « Blocked <nom>. » avec un bouton Dismiss
+    // (test réel du 28/10/2026 sur un profil : bloqué en 4,5 s, Unblock
+    // affiché, le dialogue se referme de lui-même après la transition).
     const closer = await waitFor(() => {
       const d = lastDialog();
       return d ? findButton(WORDS.dismiss, d) : null;

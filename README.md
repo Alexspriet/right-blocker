@@ -32,6 +32,14 @@ profils déjà traités ne sont jamais retentés, sauf par le popup.
   driver répond au message `{type: 'block', network, handle}` par un statut.
 - `src/popup/` : état, chargement, démarrer, pause, journal.
 
+## État des tests
+
+- Instagram : chemin complet exécuté le 28/10/2026 dans un Chrome connecté
+  (interface anglaise), par injection du driver : statut `blocked` en 4,5 s,
+  bouton Unblock affiché, second passage renvoie `already`. Le popup et le
+  service worker n'ont pas encore tourné en extension chargée.
+- X : non testé.
+
 ## Limites connues
 
 - Les sélecteurs `data-testid` de X changent parfois : le driver les tient
